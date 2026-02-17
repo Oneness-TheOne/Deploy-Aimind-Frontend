@@ -32,6 +32,7 @@ import {
   Sun
 } from "lucide-react"
 import { Pagination } from "@/components/ui/pagination-simple"
+import { Progress } from "@/components/ui/progress"
 
 interface DiaryEntry {
   id: string
@@ -108,6 +109,11 @@ export function DiaryOCR({
   const [selectedEntry, setSelectedEntry] = useState<DiaryEntry | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [ocrProgress, setOcrProgress] = useState(0)
+  const [ocrStage, setOcrStage] = useState("")
+  const [ocrElapsedSeconds, setOcrElapsedSeconds] = useState(0)
+  const [ocrCompletedDurationMs, setOcrCompletedDurationMs] = useState<number | null>(null)
+  const ocrElapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     setIsVisible(true)
@@ -211,8 +217,17 @@ export function DiaryOCR({
       setExtractedText("")
       setOcrResult(null)
       setErrorMessage("")
+      setOcrProgress(0)
+      setOcrCompletedDurationMs(null)
     }
     reader.readAsDataURL(file)
+  }
+
+  const clearOcrElapsedInterval = () => {
+    if (ocrElapsedIntervalRef.current) {
+      clearInterval(ocrElapsedIntervalRef.current)
+      ocrElapsedIntervalRef.current = null
+    }
   }
 
   const handleExtractText = async () => {
@@ -220,42 +235,116 @@ export function DiaryOCR({
 
     setIsProcessing(true)
     setErrorMessage("")
+    setOcrProgress(0)
+    setOcrStage("")
+    setOcrElapsedSeconds(0)
+    setOcrCompletedDurationMs(null)
+    const startedAt = Date.now()
+
+    ocrElapsedIntervalRef.current = setInterval(() => {
+      setOcrElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000))
+    }, 1000)
+
     try {
       const formData = new FormData()
       formData.append("file", uploadedFile)
 
-      const response = await fetch(`${apiBaseUrl}/diary-ocr/extract`, {
+      const response = await fetch(`${apiBaseUrl}/diary-ocr/extract-stream`, {
         method: "POST",
-        body: formData
+        body: formData,
       })
 
-      const data = await response.json()
       if (!response.ok) {
-        const detail = typeof data?.detail === "string" ? data.detail : null
-        throw new Error(detail ?? "텍스트 추출에 실패했습니다.")
+        const text = await response.text()
+        throw new Error(text || "텍스트 추출에 실패했습니다.")
       }
-      const raw = Array.isArray(data) ? data[0] : data
-      const payload = raw ?? data
-      const imageFromApi =
-        payload?.["image_data_url"] ??
-        (payload as Record<string, unknown>)?.["imageDataUrl"] ??
-        data?.["image_data_url"] ??
-        (data as Record<string, unknown>)?.["imageDataUrl"]
-      const normalized: DiaryOcrResult = {
-        original: payload?.["원본"] ?? "",
-        date: payload?.["날짜"] ?? "",
-        weather: payload?.["날씨"] ?? "",
-        title: payload?.["제목"] ?? "",
-        corrected: payload?.["교정된_내용"] ?? payload?.["내용"] ?? "",
-        imageDataUrl: typeof imageFromApi === "string" ? imageFromApi : undefined,
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      if (!reader) throw new Error("스트림을 읽을 수 없습니다.")
+
+      let buffer = ""
+      let finalResult: DiaryOcrResult | null = null
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() ?? ""
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6)) as Record<string, unknown>
+              if (data.progress != null && typeof data.progress === "number") {
+                setOcrProgress(data.progress)
+                if (typeof data.stage === "string") setOcrStage(data.stage)
+              }
+              if (data.done === true && Array.isArray(data.result) && data.result[0]) {
+                const payload = data.result[0] as Record<string, unknown>
+                const imageFromApi =
+                  payload?.image_data_url ?? (payload as Record<string, unknown>)?.imageDataUrl
+                finalResult = {
+                  original: String(payload?.원본 ?? ""),
+                  date: String(payload?.날짜 ?? ""),
+                  weather: String(payload?.날씨 ?? ""),
+                  title: String(payload?.제목 ?? ""),
+                  corrected: String(payload?.교정된_내용 ?? payload?.내용 ?? ""),
+                  imageDataUrl: typeof imageFromApi === "string" ? imageFromApi : undefined,
+                }
+              }
+              if (data.error === true && data.detail) {
+                throw new Error(String(data.detail))
+              }
+            } catch (e) {
+              if (e instanceof SyntaxError) continue
+              throw e
+            }
+          }
+        }
       }
-      setOcrResult(normalized)
-      setExtractedText(normalized.corrected || normalized.original)
+      if (buffer.startsWith("data: ")) {
+        try {
+          const data = JSON.parse(buffer.slice(6)) as Record<string, unknown>
+          if (data.done === true && Array.isArray(data.result) && data.result[0]) {
+            const payload = data.result[0] as Record<string, unknown>
+            const imageFromApi = payload?.image_data_url ?? (payload as Record<string, unknown>)?.imageDataUrl
+            finalResult = {
+              original: String(payload?.원본 ?? ""),
+              date: String(payload?.날짜 ?? ""),
+              weather: String(payload?.날씨 ?? ""),
+              title: String(payload?.제목 ?? ""),
+              corrected: String(payload?.교정된_내용 ?? payload?.내용 ?? ""),
+              imageDataUrl: typeof imageFromApi === "string" ? imageFromApi : undefined,
+            }
+          }
+          if (data.error === true && data.detail) throw new Error(String(data.detail))
+        } catch (e) {
+          if (!(e instanceof SyntaxError)) throw e
+        }
+      }
+
+      clearOcrElapsedInterval()
+      const durationMs = Date.now() - startedAt
+      setOcrCompletedDurationMs(durationMs)
+      setOcrProgress(100)
+      setOcrStage("완료")
+
+      if (!finalResult) throw new Error("추출 결과를 받지 못했습니다.")
+
+      setOcrResult(finalResult)
+      setExtractedText(finalResult.corrected || finalResult.original)
       setErrorMessage("")
       setTimeout(() => {
-        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-      }, 300)
+        setIsProcessing(false)
+        setTimeout(() => {
+          resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+        }, 300)
+      }, 600)
     } catch (error) {
+      clearOcrElapsedInterval()
+      setOcrProgress(0)
+      setOcrStage("")
       const message =
         error instanceof Error
           ? error.message
@@ -263,7 +352,6 @@ export function DiaryOCR({
       setErrorMessage(message)
       setExtractedText(message)
       setOcrResult(null)
-    } finally {
       setIsProcessing(false)
     }
   }
@@ -379,6 +467,8 @@ export function DiaryOCR({
     setExtractedText("")
     setOcrResult(null)
     setErrorMessage("")
+    setOcrProgress(0)
+    setOcrCompletedDurationMs(null)
   }
 
   const handleWeatherChange = (value: string | undefined) => {
@@ -514,15 +604,106 @@ export function DiaryOCR({
               </div>
             </div>
 
-            {/* Loading Animation */}
+            {/* OCR 진행: 서버 파이프라인 기준 진행률, 경과 시간, 완료 소요 시간 */}
             {isProcessing && (
-              <div className="flex flex-col items-center gap-4 py-10 bg-white rounded-2xl border border-slate-200 shadow-sm">
-                <div className="relative">
-                  <div className="h-16 w-16 rounded-full border-4 border-teal-100 border-t-teal-500 animate-spin" />
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-slate-700">AI가 그림일기를 읽고 있어요</p>
-                  <p className="text-sm text-slate-400 mt-1">잠시만 기다려주세요...</p>
+              <div className="analyzing-fade-up relative overflow-hidden rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-lg">
+                {/* 배경 그라데이션 애니메이션 */}
+                <div className="analyzing-bg absolute inset-0 opacity-30 pointer-events-none" />
+
+                <div className="relative flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-black/[0.04] dark:divide-white/[0.04]">
+                  {/* 왼쪽: 아이콘 + 제목 */}
+                  <div className="flex-1 flex flex-col items-center justify-center p-8">
+                    {/* 아이콘 영역 */}
+                    <div className="relative mb-5">
+                      <div className="analyzing-ring-pulse absolute -inset-3 rounded-full border-2 border-teal-300/30" />
+                      <div className="analyzing-ring-pulse absolute -inset-6 rounded-full border border-teal-300/15" style={{ animationDelay: "1s" }} />
+                      <div className="analyzing-icon-float relative h-16 w-16 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+                        <BookOpen className="h-7 w-7 text-white" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="analyzing-orbit-dot h-2 w-2 rounded-full bg-teal-300/70" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <h3 className="font-bold text-slate-800 dark:text-slate-200 text-center">
+                      {ocrStage || "AI가 그림일기를 읽고 있어요"}
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 tabular-nums">
+                      {ocrCompletedDurationMs != null
+                        ? `추출 완료 · 소요 시간 ${ocrCompletedDurationMs >= 60000 ? `${Math.floor(ocrCompletedDurationMs / 60000)}분 ` : ""}${Math.round((ocrCompletedDurationMs % 60000) / 1000)}초`
+                        : `소요 시간 ${Math.floor(ocrElapsedSeconds / 60)}분 ${ocrElapsedSeconds % 60}초`}
+                    </p>
+                  </div>
+
+                  {/* 오른쪽: 프로그레스 + 단계 */}
+                  <div className="flex-1 flex flex-col justify-center p-8">
+                    {/* 프로그레스 바 */}
+                    <div className="mb-5">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">진행률</span>
+                        <span className="font-bold text-teal-600 dark:text-teal-400 tabular-nums">{Math.round(ocrProgress)}%</span>
+                      </div>
+                      <div className="relative">
+                        <Progress value={ocrProgress} className="h-3 rounded-full" />
+                        {ocrProgress < 100 && (
+                          <div className="analyzing-shimmer absolute inset-0 rounded-full overflow-hidden pointer-events-none" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 단계 표시 */}
+                    <div className="space-y-2">
+                      {[
+                        { label: "이미지 전처리", threshold: 0 },
+                        { label: "손글씨 인식 중", threshold: 30 },
+                        { label: "텍스트 교정 중", threshold: 70 },
+                      ].map((step, i) => {
+                        const isComplete = ocrProgress > step.threshold + 29
+                        const isActive = ocrProgress >= step.threshold && ocrProgress <= step.threshold + 29
+                        return (
+                          <div
+                            key={i}
+                            className={`analyzing-step-enter flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-300 ${
+                              isActive
+                                ? "bg-teal-50 dark:bg-teal-900/20 border border-teal-200/50 dark:border-teal-800/30"
+                                : isComplete
+                                  ? "bg-emerald-50/60 dark:bg-emerald-900/15 border border-emerald-200/40 dark:border-emerald-800/20"
+                                  : "opacity-40 border border-transparent"
+                            }`}
+                            style={{ animationDelay: `${i * 0.1}s` }}
+                          >
+                            <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
+                              isActive
+                                ? "bg-teal-500 text-white shadow-sm"
+                                : isComplete
+                                  ? "bg-emerald-500 text-white"
+                                  : "bg-slate-200 dark:bg-slate-700 text-slate-400"
+                            }`}>
+                              {isComplete ? (
+                                <svg className="analyzing-check-draw h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : (
+                                <span className="text-xs font-bold">{i + 1}</span>
+                              )}
+                            </div>
+                            <span className={`text-sm font-medium ${
+                              isActive ? "text-slate-800 dark:text-slate-200" : isComplete ? "text-emerald-700 dark:text-emerald-400" : "text-slate-400"
+                            }`}>
+                              {isComplete ? step.label.replace("중", " 완료") : step.label}
+                            </span>
+                            {isActive && (
+                              <div className="ml-auto flex gap-1">
+                                <span className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: "0ms" }} />
+                                <span className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+                                <span className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -558,6 +739,11 @@ export function DiaryOCR({
                       </div>
                       <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200">
                         AI 추출 완료
+                        {ocrCompletedDurationMs != null && (
+                          <span className="ml-1.5 font-normal">
+                            · {ocrCompletedDurationMs >= 60000 ? `${Math.floor(ocrCompletedDurationMs / 60000)}분 ` : ""}{Math.round((ocrCompletedDurationMs % 60000) / 1000)}초
+                          </span>
+                        )}
                       </Badge>
                     </div>
                   </div>
