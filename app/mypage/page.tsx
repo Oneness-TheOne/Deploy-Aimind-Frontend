@@ -401,9 +401,11 @@ export default function MyPage() {
     if (!profile.created_at) return "가입일 정보 없음";
     const parsed = new Date(profile.created_at);
     if (Number.isNaN(parsed.getTime())) return "가입일 정보 없음";
-    const year = parsed.getFullYear();
-    const month = String(parsed.getMonth() + 1).padStart(2, "0");
-    const day = String(parsed.getDate()).padStart(2, "0");
+    // 한국 시간대(UTC+9)로 변환: +9시간
+    const kstDate = new Date(parsed.getTime() + 9 * 60 * 60 * 1000);
+    const year = kstDate.getFullYear();
+    const month = String(kstDate.getMonth() + 1).padStart(2, "0");
+    const day = String(kstDate.getDate()).padStart(2, "0");
     return `${year}.${month}.${day} 가입`;
   })();
 
