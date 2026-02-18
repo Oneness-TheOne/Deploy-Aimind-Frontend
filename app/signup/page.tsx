@@ -30,7 +30,6 @@ export default function SignupPage() {
     password: "",
     confirmPassword: "",
     name: "",
-    region: "",
     agreeTerms: false,
     agreePrivacy: false,
     agreeMarketing: false,
@@ -41,25 +40,6 @@ export default function SignupPage() {
     { label: "영문 포함", met: /[a-zA-Z]/.test(formData.password) },
     { label: "숫자 포함", met: /[0-9]/.test(formData.password) },
   ];
-  const regionOptions = [
-    "서울특별시",
-    "부산광역시",
-    "대구광역시",
-    "인천광역시",
-    "광주광역시",
-    "대전광역시",
-    "울산광역시",
-    "경기도",
-    "강원도",
-    "충청북도",
-    "충청남도",
-    "전라북도",
-    "전라남도",
-    "경상북도",
-    "경상남도",
-    "제주특별자치도",
-  ];
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agreeTerms || !formData.agreePrivacy) {
@@ -79,7 +59,6 @@ export default function SignupPage() {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          region: formData.region,
           agree_terms: formData.agreeTerms,
           agree_privacy: formData.agreePrivacy,
           agree_marketing: formData.agreeMarketing,
@@ -161,28 +140,6 @@ export default function SignupPage() {
                     }
                     required
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="region">지역</Label>
-                  <select
-                    id="region"
-                    value={formData.region}
-                    onChange={(e) =>
-                      setFormData({ ...formData, region: e.target.value })
-                    }
-                    required
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <option value="" disabled>
-                      지역을 선택하세요
-                    </option>
-                    {regionOptions.map((region) => (
-                      <option key={region} value={region}>
-                        {region}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
                 <div className="space-y-2">
@@ -390,6 +347,12 @@ export default function SignupPage() {
                   variant="outline"
                   className="w-full gap-2 bg-transparent"
                   type="button"
+                  onClick={() => {
+                    const baseUrl =
+                      process.env.NEXT_PUBLIC_API_BASE_URL ??
+                      "http://localhost:8000";
+                    window.location.href = `${baseUrl}/auth/google/login`;
+                  }}
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
                     <path
@@ -415,6 +378,12 @@ export default function SignupPage() {
                   variant="outline"
                   className="w-full gap-2 bg-[#FEE500] hover:bg-[#FEE500]/90 text-[#191919] border-[#FEE500]"
                   type="button"
+                  onClick={() => {
+                    const baseUrl =
+                      process.env.NEXT_PUBLIC_API_BASE_URL ??
+                      "http://localhost:8000";
+                    window.location.href = `${baseUrl}/auth/kakao/login`;
+                  }}
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
                     <path
