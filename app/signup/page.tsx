@@ -1,23 +1,30 @@
-"use client"
+"use client";
 
-import React from "react"
+import React from "react";
 
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Eye, EyeOff, ArrowLeft, Check } from "lucide-react"
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Eye, EyeOff, ArrowLeft, Check } from "lucide-react";
 
 export default function SignupPage() {
-  const router = useRouter()
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"
+  const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const apiBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -27,13 +34,13 @@ export default function SignupPage() {
     agreeTerms: false,
     agreePrivacy: false,
     agreeMarketing: false,
-  })
+  });
 
   const passwordRequirements = [
     { label: "8자 이상", met: formData.password.length >= 8 },
     { label: "영문 포함", met: /[a-zA-Z]/.test(formData.password) },
     { label: "숫자 포함", met: /[0-9]/.test(formData.password) },
-  ]
+  ];
   const regionOptions = [
     "서울특별시",
     "부산광역시",
@@ -51,19 +58,19 @@ export default function SignupPage() {
     "경상북도",
     "경상남도",
     "제주특별자치도",
-  ]
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!formData.agreeTerms || !formData.agreePrivacy) {
-      alert("이용약관과 개인정보처리방침에 동의해주세요.")
-      return
+      alert("이용약관과 개인정보처리방침에 동의해주세요.");
+      return;
     }
     if (formData.password !== formData.confirmPassword) {
-      alert("비밀번호가 일치하지 않습니다.")
-      return
+      alert("비밀번호가 일치하지 않습니다.");
+      return;
     }
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       const response = await fetch(`${apiBaseUrl}/auth/signup`, {
         method: "POST",
@@ -77,26 +84,31 @@ export default function SignupPage() {
           agree_privacy: formData.agreePrivacy,
           agree_marketing: formData.agreeMarketing,
         }),
-      })
+      });
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        const message = errorData?.detail?.message || "회원가입에 실패했습니다."
-        throw new Error(message)
+        const errorData = await response.json().catch(() => ({}));
+        const message =
+          errorData?.detail?.message || "회원가입에 실패했습니다.";
+        throw new Error(message);
       }
-      setIsLoading(false)
-      router.push("/login")
+      setIsLoading(false);
+      router.push("/login");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "회원가입에 실패했습니다."
-      alert(message)
-      setIsLoading(false)
+      const message =
+        error instanceof Error ? error.message : "회원가입에 실패했습니다.";
+      alert(message);
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-secondary/30 to-background flex flex-col">
       {/* Header */}
       <header className="p-4">
-        <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
           <ArrowLeft className="h-4 w-4" />
           <span className="text-sm">홈으로 돌아가기</span>
         </Link>
@@ -107,13 +119,24 @@ export default function SignupPage() {
         <div className="w-full max-w-md space-y-6">
           {/* Logo */}
           <div className="text-center space-y-2">
-            <Link href="/" className="inline-flex items-center gap-2 justify-center">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 justify-center"
+            >
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary overflow-hidden">
-                <img src="/aimind.png" alt="아이마음" className="h-6 w-6 object-contain" />
+                <img
+                  src="/aimind.png"
+                  alt="아이마음"
+                  className="h-6 w-6 object-contain"
+                />
               </div>
-              <span className="text-2xl font-semibold text-foreground">아이마음</span>
+              <span className="text-2xl font-semibold text-foreground">
+                아이마음
+              </span>
             </Link>
-            <p className="text-muted-foreground">아이의 마음을 이해하는 첫 걸음</p>
+            <p className="text-muted-foreground">
+              아이의 마음을 이해하는 첫 걸음
+            </p>
           </div>
 
           {/* Signup Card */}
@@ -133,7 +156,9 @@ export default function SignupPage() {
                     type="text"
                     placeholder="홍길동"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -143,7 +168,9 @@ export default function SignupPage() {
                   <select
                     id="region"
                     value={formData.region}
-                    onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, region: e.target.value })
+                    }
                     required
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
@@ -165,7 +192,9 @@ export default function SignupPage() {
                     type="email"
                     placeholder="example@email.com"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -178,7 +207,9 @@ export default function SignupPage() {
                       type={showPassword ? "text" : "password"}
                       placeholder="비밀번호를 입력하세요"
                       value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
                       required
                     />
                     <Button
@@ -225,7 +256,12 @@ export default function SignupPage() {
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="비밀번호를 다시 입력하세요"
                       value={formData.confirmPassword}
-                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          confirmPassword: e.target.value,
+                        })
+                      }
                       required
                     />
                     <Button
@@ -233,7 +269,9 @@ export default function SignupPage() {
                       variant="ghost"
                       size="icon"
                       className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -243,9 +281,12 @@ export default function SignupPage() {
                       <span className="sr-only">비밀번호 표시 토글</span>
                     </Button>
                   </div>
-                  {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                    <p className="text-xs text-destructive">비밀번호가 일치하지 않습니다</p>
-                  )}
+                  {formData.confirmPassword &&
+                    formData.password !== formData.confirmPassword && (
+                      <p className="text-xs text-destructive">
+                        비밀번호가 일치하지 않습니다
+                      </p>
+                    )}
                 </div>
 
                 <div className="space-y-3 pt-2">
@@ -254,13 +295,22 @@ export default function SignupPage() {
                       id="agreeTerms"
                       checked={formData.agreeTerms}
                       onCheckedChange={(checked) =>
-                        setFormData({ ...formData, agreeTerms: checked === true })
+                        setFormData({
+                          ...formData,
+                          agreeTerms: checked === true,
+                        })
                       }
                       className="mt-0.5"
                     />
-                    <Label htmlFor="agreeTerms" className="text-sm font-normal cursor-pointer leading-relaxed">
+                    <Label
+                      htmlFor="agreeTerms"
+                      className="text-sm font-normal cursor-pointer leading-relaxed"
+                    >
                       <span className="text-destructive">*</span>{" "}
-                      <Link href="/terms" className="text-primary hover:underline">
+                      <Link
+                        href="/terms"
+                        className="text-primary hover:underline"
+                      >
                         이용약관
                       </Link>
                       에 동의합니다
@@ -271,13 +321,22 @@ export default function SignupPage() {
                       id="agreePrivacy"
                       checked={formData.agreePrivacy}
                       onCheckedChange={(checked) =>
-                        setFormData({ ...formData, agreePrivacy: checked === true })
+                        setFormData({
+                          ...formData,
+                          agreePrivacy: checked === true,
+                        })
                       }
                       className="mt-0.5"
                     />
-                    <Label htmlFor="agreePrivacy" className="text-sm font-normal cursor-pointer leading-relaxed">
+                    <Label
+                      htmlFor="agreePrivacy"
+                      className="text-sm font-normal cursor-pointer leading-relaxed"
+                    >
                       <span className="text-destructive">*</span>{" "}
-                      <Link href="/privacy" className="text-primary hover:underline">
+                      <Link
+                        href="/privacy"
+                        className="text-primary hover:underline"
+                      >
                         개인정보처리방침
                       </Link>
                       에 동의합니다
@@ -288,11 +347,17 @@ export default function SignupPage() {
                       id="agreeMarketing"
                       checked={formData.agreeMarketing}
                       onCheckedChange={(checked) =>
-                        setFormData({ ...formData, agreeMarketing: checked === true })
+                        setFormData({
+                          ...formData,
+                          agreeMarketing: checked === true,
+                        })
                       }
                       className="mt-0.5"
                     />
-                    <Label htmlFor="agreeMarketing" className="text-sm font-normal cursor-pointer leading-relaxed">
+                    <Label
+                      htmlFor="agreeMarketing"
+                      className="text-sm font-normal cursor-pointer leading-relaxed"
+                    >
                       마케팅 정보 수신에 동의합니다 (선택)
                     </Label>
                   </div>
@@ -301,7 +366,9 @@ export default function SignupPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isLoading || !formData.agreeTerms || !formData.agreePrivacy}
+                  disabled={
+                    isLoading || !formData.agreeTerms || !formData.agreePrivacy
+                  }
                 >
                   {isLoading ? "가입 중..." : "회원가입"}
                 </Button>
@@ -312,12 +379,18 @@ export default function SignupPage() {
                   <div className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">또는</span>
+                  <span className="bg-card px-2 text-muted-foreground">
+                    또는
+                  </span>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <Button variant="outline" className="w-full gap-2 bg-transparent" type="button">
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 bg-transparent"
+                  type="button"
+                >
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
@@ -338,7 +411,11 @@ export default function SignupPage() {
                   </svg>
                   Google로 계속하기
                 </Button>
-                <Button variant="outline" className="w-full gap-2 bg-[#FEE500] hover:bg-[#FEE500]/90 text-[#191919] border-[#FEE500]" type="button">
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 bg-[#FEE500] hover:bg-[#FEE500]/90 text-[#191919] border-[#FEE500]"
+                  type="button"
+                >
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
@@ -354,12 +431,15 @@ export default function SignupPage() {
           {/* Login Link */}
           <p className="text-center text-sm text-muted-foreground">
             이미 계정이 있으신가요?{" "}
-            <Link href="/login" className="text-primary font-medium hover:underline">
+            <Link
+              href="/login"
+              className="text-primary font-medium hover:underline"
+            >
               로그인
             </Link>
           </p>
         </div>
       </main>
     </div>
-  )
+  );
 }

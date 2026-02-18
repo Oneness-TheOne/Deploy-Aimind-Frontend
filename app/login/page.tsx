@@ -62,9 +62,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-50 flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
-      <header className="p-4 lg:p-6">
+      <header className="p-4 lg:p-6 flex-shrink-0">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
@@ -75,7 +75,7 @@ export default function LoginPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-4">
+      <main className="flex-1 flex items-center justify-center p-4 py-8">
         <div className="w-full max-w-md space-y-6">
           {/* Logo */}
           <div className="text-center space-y-2">
@@ -84,7 +84,11 @@ export default function LoginPage() {
               className="inline-flex items-center gap-2.5 justify-center"
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary overflow-hidden">
-                <img src="/aimind.png" alt="아이마음" className="h-7 w-7 object-contain" />
+                <img
+                  src="/aimind.png"
+                  alt="아이마음"
+                  className="h-7 w-7 object-contain"
+                />
               </div>
               <span className="text-2xl font-bold text-foreground">
                 아이마음
@@ -201,12 +205,6 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full gap-2 bg-transparent"
                   type="button"
-                  onClick={() => {
-                    const baseUrl =
-                      process.env.NEXT_PUBLIC_API_BASE_URL ??
-                      "http://localhost:8000";
-                    window.location.href = `${baseUrl}/auth/google/login`;
-                  }}
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
                     <path
