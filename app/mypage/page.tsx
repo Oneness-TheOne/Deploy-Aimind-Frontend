@@ -270,10 +270,15 @@ export default function MyPage() {
       ?.drawing_scores?.aggregated;
     const prevAgg = (prev?.rawDrawing?.comparison as { drawing_scores?: { aggregated?: Record<string, number> } } | undefined)
       ?.drawing_scores?.aggregated;
-    const fallback = 50; // 또래 평균
+    
+    // 분석 결과가 없으면 null 반환
+    if (!agg) {
+      return null;
+    }
+    
     return DEVELOPMENT_AREA_KEYS.map((area) => {
-      const current = agg && typeof agg[area.scoreKey] === "number" ? Math.round(agg[area.scoreKey]) : fallback;
-      const previous = prevAgg && typeof prevAgg[area.scoreKey] === "number" ? Math.round(prevAgg[area.scoreKey]) : fallback;
+      const current = agg && typeof agg[area.scoreKey] === "number" ? Math.round(agg[area.scoreKey]) : null;
+      const previous = prevAgg && typeof prevAgg[area.scoreKey] === "number" ? Math.round(prevAgg[area.scoreKey]) : null;
       return {
         ...area,
         current,
@@ -665,9 +670,6 @@ export default function MyPage() {
                   <h1 className="text-2xl font-bold">
                     {profile.name || "회원"}
                   </h1>
-                  <Badge className="bg-white/20 text-white hover:bg-white/30 border-0 backdrop-blur-sm">
-                    프리미엄
-                  </Badge>
                 </div>
                 <p className="text-white/70 mt-1">
                   {profile.email || "이메일 정보 없음"}
@@ -993,44 +995,63 @@ export default function MyPage() {
                     최근 분석 결과 기반
                   </span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {developmentAreaData.map((data, index) => (
-                    <div
-                      key={data.key}
-                      className={`bg-slate-50 rounded-2xl p-5 transition-all duration-500 hover:bg-slate-100 ${
-                        isVisible
-                          ? "opacity-100 translate-y-0"
-                          : "opacity-0 translate-y-4"
-                      }`}
-                      style={{ transitionDelay: `${400 + index * 100}ms` }}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-medium text-slate-600">
-                          {data.label}
-                        </span>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${
-                            data.current > data.previous
-                              ? "bg-green-100 text-green-600"
-                              : "bg-slate-200 text-slate-500"
-                          }`}
-                        >
-                          {data.current > data.previous ? "+" : ""}
-                          {data.current - data.previous}
-                        </span>
+                {developmentAreaData === null || developmentAreaData.length === 0 ? (
+                  <div className="text-center py-12 bg-slate-50 rounded-2xl">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                    <p className="text-sm text-slate-500">분석 결과가 없습니다</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      아이의 그림을 분석하면 발달 영역별 분석을 확인할 수 있어요
+                    </p>
+                    <Link href="/analysis">
+                      <Button size="sm" className="mt-3 gap-2">
+                        <Plus className="h-4 w-4" />분석 시작하기
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {developmentAreaData.map((data, index) => (
+                      <div
+                        key={data.key}
+                        className={`bg-slate-50 rounded-2xl p-5 transition-all duration-500 hover:bg-slate-100 ${
+                          isVisible
+                            ? "opacity-100 translate-y-0"
+                            : "opacity-0 translate-y-4"
+                        }`}
+                        style={{ transitionDelay: `${400 + index * 100}ms` }}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-medium text-slate-600">
+                            {data.label}
+                          </span>
+                          {data.current !== null && data.previous !== null && (
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full ${
+                                data.current > data.previous
+                                  ? "bg-green-100 text-green-600"
+                                  : "bg-slate-200 text-slate-500"
+                              }`}
+                            >
+                              {data.current > data.previous ? "+" : ""}
+                              {data.current - data.previous}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-3xl font-bold text-slate-800">
+                          {data.current !== null ? data.current : "-"}
+                        </p>
+                        <div className="mt-3 h-2 bg-slate-200 rounded-full overflow-hidden">
+                          {data.current !== null && (
+                            <div
+                              className={`h-full ${data.color} rounded-full transition-all duration-1000`}
+                              style={{ width: `${data.current}%` }}
+                            />
+                          )}
+                        </div>
                       </div>
-                      <p className="text-3xl font-bold text-slate-800">
-                        {data.current}
-                      </p>
-                      <div className="mt-3 h-2 bg-slate-200 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${data.color} rounded-full transition-all duration-1000`}
-                          style={{ width: `${data.current}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </section>
 
               {/* Recent Analysis */}
