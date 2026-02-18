@@ -201,6 +201,12 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full gap-2 bg-transparent"
                   type="button"
+                  onClick={() => {
+                    const baseUrl =
+                      process.env.NEXT_PUBLIC_API_BASE_URL ??
+                      "http://localhost:8000";
+                    window.location.href = `${baseUrl}/auth/google/login`;
+                  }}
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
                     <path
