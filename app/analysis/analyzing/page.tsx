@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
 import { Sparkles, Brain, Users, FileText, Lightbulb } from "lucide-react";
+import { AnalysisStoryModal } from "@/components/analysis/analysis-story-modal";
 
 const aimodelsBaseUrl =
   process.env.NEXT_PUBLIC_AIMODELS_BASE_URL ?? "http://localhost:8080";
@@ -73,6 +74,8 @@ export default function AnalyzingPage() {
   const [completedDurationMs, setCompletedDurationMs] = useState<number | null>(
     null,
   );
+  const [storyOpen, setStoryOpen] = useState(false);
+  const [storyData, setStoryData] = useState<any>(null);
 
   const particles = useParticles(12);
 
@@ -301,8 +304,10 @@ export default function AnalyzingPage() {
           }
         }
 
+        // 분석 완료 → 스토리 모달 표시
+        setStoryData(data);
         setTimeout(() => {
-          router.push("/analysis/result");
+          setStoryOpen(true);
         }, 500);
       })
       .catch((err: Error) => {
@@ -328,6 +333,15 @@ export default function AnalyzingPage() {
   const StepIcon = analysisSteps[currentStep]?.icon ?? Sparkles;
 
   return (
+    <>
+    <AnalysisStoryModal
+      open={storyOpen}
+      data={storyData}
+      onClose={() => {
+        setStoryOpen(false);
+        router.push("/analysis/result");
+      }}
+    />
     <div className="analyzing-bg fixed inset-0 flex items-center justify-center p-4 overflow-hidden">
       {/* ── Floating particles ── */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -529,5 +543,6 @@ export default function AnalyzingPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
