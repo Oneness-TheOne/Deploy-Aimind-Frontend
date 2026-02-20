@@ -62,7 +62,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col -mt-[var(--header-height)]">
       {/* Header */}
       <header className="p-4 lg:p-6 flex-shrink-0">
         <Link

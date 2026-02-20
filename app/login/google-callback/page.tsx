@@ -29,7 +29,7 @@ export default function GoogleCallbackPage() {
   }, [router, searchParams]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 -mt-[var(--header-height)]">
       <div className="text-center space-y-2">
         <p className="text-sm text-muted-foreground">구글 로그인 처리 중입니다...</p>
       </div>

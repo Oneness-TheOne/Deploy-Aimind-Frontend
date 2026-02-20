@@ -238,19 +238,23 @@ export default function AnalyzingPage() {
                 const results = data?.results || {};
                 const rawImg = (o: unknown) =>
                   o && typeof o === "object" ? o : {};
+                const one = (key: "tree" | "house" | "man" | "woman") => {
+                  const r = results[key];
+                  const imageJson = rawImg(r?.image_json);
+                  const legacyJson = rawImg((r as { legacy_json?: unknown })?.legacy_json);
+                  const out: Record<string, unknown> = {
+                    image_json: JSON.parse(JSON.stringify(imageJson)),
+                  };
+                  if (legacyJson && Object.keys(legacyJson).length > 0) {
+                    out.legacy_json = JSON.parse(JSON.stringify(legacyJson));
+                  }
+                  return out;
+                };
                 const elementAnalysis = {
-                  tree: JSON.parse(
-                    JSON.stringify(rawImg(results.tree?.image_json)),
-                  ),
-                  house: JSON.parse(
-                    JSON.stringify(rawImg(results.house?.image_json)),
-                  ),
-                  man: JSON.parse(
-                    JSON.stringify(rawImg(results.man?.image_json)),
-                  ),
-                  woman: JSON.parse(
-                    JSON.stringify(rawImg(results.woman?.image_json)),
-                  ),
+                  tree: one("tree"),
+                  house: one("house"),
+                  man: one("man"),
+                  woman: one("woman"),
                 };
                 const boxImagesBase64: Record<string, string | null> = {
                   tree: results.tree?.box_image_base64 ?? null,

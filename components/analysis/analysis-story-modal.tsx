@@ -74,6 +74,25 @@ function replaceAgeGender(text: string, callName: string): string {
     .replace(/\d+세\s*여아/g, callName);
 }
 
+/** API 추천 카테고리(영문) → 표시용 한글 라벨 */
+const RECOMMENDATION_CATEGORY_LABELS: Record<string, string> = {
+  emotional_psychological_support: "정서·심리 지원",
+  interpersonal_social: "대인관계·사회성",
+  parenting_daily_activities: "양육·일상 활동",
+  analysis_based: "분석 기반 추천",
+};
+
+function getRecommendationCategoryLabel(category: string): string {
+  if (!category || typeof category !== "string") return category;
+  const exact = RECOMMENDATION_CATEGORY_LABELS[category];
+  if (exact) return exact;
+  const key = category.trim().toLowerCase();
+  const entry = Object.entries(RECOMMENDATION_CATEGORY_LABELS).find(
+    ([k]) => k.toLowerCase() === key,
+  );
+  return entry ? entry[1] : category;
+}
+
 /* ── types ─────────────────────────────────────────────── */
 
 interface AnalysisData {
@@ -436,7 +455,7 @@ function buildPages(data: AnalysisData | null): StoryPage[] {
     const recText = recs
       .slice(0, 2)
       .map((r) => {
-        const catLabel = r.category || "";
+        const catLabel = getRecommendationCategoryLabel(r.category || "");
         const items = Array.isArray(r.items)
           ? r.items
               .slice(0, 3)

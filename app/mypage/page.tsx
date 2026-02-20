@@ -350,10 +350,15 @@ export default function MyPage() {
         const psych = resolved.psychological_interpretation?.[key] || {};
         const interp = psych.interpretation;
         const analysis = psych.analysis;
+        const el = resolved.element_analysis?.[key] as Record<string, unknown> | undefined;
+        // DB는 element_analysis[key]를 { image_json, legacy_json } 형태로 저장함 → RAG용 image_json만 전달
+        const imageJson =
+          (el && typeof el === "object" && "image_json" in el && el.image_json)
+            ? (el.image_json as Record<string, unknown>)
+            : (el || {});
         acc[key] = {
           label: labels[key],
-          image_json:
-            (resolved.element_analysis?.[key] as Record<string, unknown>) || {},
+          image_json: imageJson,
           interpretation: interp,
           analysis: analysis || interp,
           box_image_base64: resolved.analyzed_image_urls?.[key] || null,

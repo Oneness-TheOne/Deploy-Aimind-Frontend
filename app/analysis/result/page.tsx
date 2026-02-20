@@ -42,7 +42,13 @@ import {
   Check,
   AlertCircle,
   AlertTriangle,
+  HelpCircle,
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   ResponsiveContainer,
   BarChart,
@@ -308,20 +314,6 @@ function getComponentElementsFromImageJson(
   return [];
 }
 
-const defaultPsychologyData = [
-  { name: "자아 존중감", score: 85, max: 100 },
-  { name: "정서 안정", score: 90, max: 100 },
-  { name: "사회성", score: 78, max: 100 },
-  { name: "창의성", score: 88, max: 100 },
-  { name: "가족 관계", score: 82, max: 100 },
-];
-
-const defaultPeerComparisonData = [
-  { name: "에너지", child: 50, average: 50 },
-  { name: "위치 안정성", child: 50, average: 50 },
-  { name: "표현력", child: 50, average: 50 },
-];
-
 const PEER_AVERAGE = 50;
 
 /** API에서 전체_심리_결과가 없을 때: 그림별 해석에서 종합 요약을 만들어 전체 요약이 사라지지 않게 함 */
@@ -390,13 +382,6 @@ function getScoreKeyword(
   return "적절한 표현력";
 }
 
-const defaultDevelopmentScores = [
-  { name: "그림 복잡도", value: 85 },
-  { name: "세부 표현력", value: 78 },
-  { name: "공간 인식", value: 90 },
-  { name: "비율 표현", value: 72 },
-];
-
 /** API returns category in English; map to display label */
 const RECOMMENDATION_CATEGORY_LABELS: Record<string, string> = {
   emotional_psychological_support: "정서·심리 지원",
@@ -417,33 +402,6 @@ function getRecommendationCategoryLabel(category: string): string {
   return category;
 }
 
-const recommendations = [
-  {
-    category: "가정 활동",
-    items: [
-      "함께 그림 그리기 시간을 주 2회 이상 가져보세요",
-      "그림에 대해 열린 질문으로 대화해보세요",
-      "아이의 그림을 집안에 전시해주세요",
-    ],
-  },
-  {
-    category: "미술 활동",
-    items: [
-      "다양한 재료(점토, 물감, 콜라주)를 경험하게 해주세요",
-      "자유로운 주제로 표현하는 시간을 가져보세요",
-      "색상 탐색 놀이를 통해 감정 표현을 도와주세요",
-    ],
-  },
-  {
-    category: "정서 발달",
-    items: [
-      "그림을 통해 하루의 감정을 표현하게 해보세요",
-      "긍정적인 피드백을 자주 해주세요",
-      "또래 친구들과 함께 그리는 활동을 추천드려요",
-    ],
-  },
-];
-
 export default function ResultPage() {
   const [activeTab, setActiveTab] = useState("basic");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -458,13 +416,15 @@ export default function ResultPage() {
     developmentStage: "분석 완료",
     emotionalState: "분석 완료",
   });
-  const [peerComparisonData, setPeerComparisonData] = useState(
-    defaultPeerComparisonData,
-  );
-  const [developmentScores, setDevelopmentScores] = useState(
-    defaultDevelopmentScores,
-  );
-  const [psychologyData, setPsychologyData] = useState(defaultPsychologyData);
+  const [peerComparisonData, setPeerComparisonData] = useState<
+    { name: string; child: number; average: number }[]
+  >([]);
+  const [developmentScores, setDevelopmentScores] = useState<
+    { name: string; value: number }[]
+  >([]);
+  const [psychologyData, setPsychologyData] = useState<
+    { name: string; score: number; max: number }[]
+  >([]);
   const [apiRecommendations, setApiRecommendations] = useState<
     { category: string; items: string[] }[]
   >([]);
@@ -473,6 +433,8 @@ export default function ResultPage() {
     인상적_분석?: string;
     구조적_분석_요약?: string;
     표상적_분석_종합?: string;
+    긍정적인_측면?: string[];
+    주의_사항?: string[];
   } | null>(null);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [boxImages, setBoxImages] = useState<Record<string, string | null>>({});
@@ -846,23 +808,26 @@ export default function ResultPage() {
       // 전체 심리 결과: API 전체_심리_결과 우선, 없으면 그림별 해석으로 종합 요약 생성 (전체 요약이 사라지지 않도록)
       let whole: typeof wholeResult | null = null;
       if (전체_심리_결과_raw && typeof 전체_심리_결과_raw === "object") {
+        const raw = 전체_심리_결과_raw as Record<string, unknown>;
+        const strList = (v: unknown): string[] =>
+          Array.isArray(v)
+            ? v.map((x) => String(x).trim()).filter(Boolean)
+            : [];
         whole = {
           종합_요약:
-            typeof 전체_심리_결과_raw.종합_요약 === "string"
-              ? 전체_심리_결과_raw.종합_요약
-              : undefined,
+            typeof raw.종합_요약 === "string" ? raw.종합_요약 : undefined,
           인상적_분석:
-            typeof 전체_심리_결과_raw.인상적_분석 === "string"
-              ? 전체_심리_결과_raw.인상적_분석
-              : undefined,
+            typeof raw.인상적_분석 === "string" ? raw.인상적_분석 : undefined,
           구조적_분석_요약:
-            typeof 전체_심리_결과_raw.구조적_분석_요약 === "string"
-              ? 전체_심리_결과_raw.구조적_분석_요약
+            typeof raw.구조적_분석_요약 === "string"
+              ? raw.구조적_분석_요약
               : undefined,
           표상적_분석_종합:
-            typeof 전체_심리_결과_raw.표상적_분석_종합 === "string"
-              ? 전체_심리_결과_raw.표상적_분석_종합
+            typeof raw.표상적_분석_종합 === "string"
+              ? raw.표상적_분석_종합
               : undefined,
+          긍정적인_측면: strList(raw.긍정적인_측면),
+          주의_사항: strList(raw.주의_사항),
         };
       } else {
         const fallback = buildWholeResultFromInterpretations(results);
@@ -1046,6 +1011,12 @@ export default function ResultPage() {
         }));
         setPsychologyData(psychData);
       }
+      // API에 비교/발달/심리 점수 없으면 빈 배열 유지 (하드코딩 숫자 노출 방지)
+      if (!ds?.aggregated && !comparison?.peer) setPeerComparisonData([]);
+      if (!ds?.aggregated && !comparison?.development?.scores)
+        setDevelopmentScores([]);
+      if (!ds?.aggregated && !comparison?.psychology?.scores)
+        setPsychologyData([]);
     }
     if (memoryImages?.length) {
       setImagePreviews(memoryImages);
@@ -1158,11 +1129,16 @@ export default function ResultPage() {
   const objectKey = OBJECT_KEYS[activeImageIndex] ?? "tree";
 
   const componentElements = useMemo(() => {
-    const imgData = interpretations[objectKey]?.image_json;
-    return getComponentElementsFromImageJson(
-      imgData as Record<string, unknown> | undefined,
-      objectKey,
-    );
+    const raw = interpretations[objectKey]?.image_json;
+    // DB/마이페이지에서 오는 래퍼 { image_json, legacy_json }이면 내부 image_json 사용
+    const imgData =
+      raw &&
+      typeof raw === "object" &&
+      "image_json" in raw &&
+      raw.image_json != null
+        ? (raw.image_json as Record<string, unknown>)
+        : (raw as Record<string, unknown> | undefined);
+    return getComponentElementsFromImageJson(imgData, objectKey);
   }, [interpretations, objectKey]);
 
   const analysisImages = useMemo(
@@ -1170,41 +1146,50 @@ export default function ResultPage() {
       {
         label: "나무",
         preview: boxImages.tree ?? null,
-        badgeClass: "bg-accent/20 text-accent-foreground",
+        badgeClass: "bg-primary/10 text-primary border-primary/20",
       },
       {
         label: "집",
         preview: boxImages.house ?? null,
-        badgeClass: "bg-primary/20 text-primary",
+        badgeClass: "bg-primary/10 text-primary border-primary/20",
       },
       {
         label: "남자사람",
         preview: boxImages.man ?? null,
-        badgeClass: "bg-chart-4/20 text-chart-4",
+        badgeClass: "bg-primary/10 text-primary border-primary/20",
       },
       {
         label: "여자사람",
         preview: boxImages.woman ?? null,
-        badgeClass: "bg-chart-3/20 text-chart-3",
+        badgeClass: "bg-primary/10 text-primary border-primary/20",
       },
     ],
     [boxImages],
   );
 
-  const allComponentElementsByKey = useMemo(
-    () =>
-      OBJECT_KEYS.map((key) => ({
+  const allComponentElementsByKey = useMemo(() => {
+    const unwrap = (raw: unknown): Record<string, unknown> | undefined => {
+      if (raw == null) return undefined;
+      if (
+        typeof raw === "object" &&
+        "image_json" in (raw as object) &&
+        (raw as Record<string, unknown>).image_json != null
+      )
+        return (raw as Record<string, unknown>).image_json as Record<
+          string,
+          unknown
+        >;
+      return raw as Record<string, unknown> | undefined;
+    };
+    return OBJECT_KEYS.map((key) => ({
+      key,
+      label: OBJECT_LABELS[key] ?? key,
+      elements: getComponentElementsFromImageJson(
+        unwrap(interpretations[key]?.image_json),
         key,
-        label: OBJECT_LABELS[key] ?? key,
-        elements: getComponentElementsFromImageJson(
-          interpretations[key]?.image_json as
-            | Record<string, unknown>
-            | undefined,
-          key,
-        ),
-      })),
-    [interpretations],
-  );
+      ),
+    }));
+  }, [interpretations]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -1247,7 +1232,7 @@ export default function ResultPage() {
                   결과
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                  {toCallName(analysisResult.childName)}
+                  {cleanChildName(analysisResult.childName)}
                   {analysisResult.age && analysisResult.age !== "-"
                     ? ` (${analysisResult.age}세${analysisResult.gender === "남" ? " 남아" : analysisResult.gender === "여" ? " 여아" : ""}${analysisResult.drawingType ? " · " + analysisResult.drawingType : ""})`
                     : analysisResult.drawingType
@@ -1288,10 +1273,33 @@ export default function ResultPage() {
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">
-                        종합 점수
-                        {drawingScores?.aggregated ? " (T-Score)" : ""}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-muted-foreground">
+                          종합 점수
+                          {drawingScores?.aggregated ? " (T-Score)" : ""}
+                        </p>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                              aria-label="도움말"
+                            >
+                              <HelpCircle className="h-3 w-3" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 p-4 text-left text-sm" align="start">
+                            <p className="font-semibold text-foreground mb-2">종합 점수 (T-Score)</p>
+                            <p className="text-muted-foreground mb-2">
+                              T-Score는 평균 50, 표준편차 10인 표준 점수입니다. 입력하신 <strong className="text-foreground">나이·성별과 같은 또래</strong> 기준으로 계산됩니다.
+                            </p>
+                            <p className="font-semibold text-foreground mb-2">상위 %</p>
+                            <p className="text-muted-foreground">
+                              같은 또래 분포 안에서 상위 몇 %에 해당하는지 나타냅니다. 7~13세, 남/여 각각 다른 기준이 적용됩니다.
+                            </p>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                       <p className="font-semibold text-foreground">
                         {analysisResult.overallScore > 0
                           ? drawingScores?.aggregated
@@ -1333,6 +1341,28 @@ export default function ResultPage() {
                     <CardTitle className="flex items-center gap-2 text-base">
                       <FileText className="h-4 w-4 text-primary" />
                       전체 심리 결과
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            aria-label="도움말"
+                          >
+                            <HelpCircle className="h-3.5 w-3.5" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-4 text-left text-sm" align="start">
+                          <p className="font-semibold text-foreground mb-2">HTP 논문 구조</p>
+                          <ul className="space-y-2 text-muted-foreground">
+                            <li><strong className="text-foreground">인상적</strong>: 그림을 처음 봤을 때의 전반적 인상</li>
+                            <li><strong className="text-foreground">구조적</strong>: 크기, 위치, 구도 등 구조적 특징</li>
+                            <li><strong className="text-foreground">표상적</strong>: 집·나무·사람이 심리적으로 무엇을 나타내는지</li>
+                          </ul>
+                          <p className="text-muted-foreground mt-2 text-xs">
+                            검사/논문에서 쓰는 용어 기준으로 구분한 종합입니다.
+                          </p>
+                        </PopoverContent>
+                      </Popover>
                     </CardTitle>
                     <CardDescription>
                       논문 구조 기반 인상적·구조적·표상적 종합
@@ -1572,51 +1602,51 @@ export default function ResultPage() {
                 ) : (
                   <>
                     <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Eye className="h-5 w-5 text-primary" />
-                          시각적 분석
-                        </CardTitle>
-                        <CardDescription>
-                          AI가 감지한 요소들이 하이라이트 되어 있습니다
-                        </CardDescription>
+                      <CardHeader className="space-y-3">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <Eye className="h-5 w-5 text-primary" />
+                            시각적 분석
+                          </CardTitle>
+                          <CardDescription>
+                            AI가 감지한 요소들이 하이라이트 되어 있습니다
+                          </CardDescription>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {analysisImages.map((item, index) => (
+                            <button
+                              key={item.label}
+                              type="button"
+                              onClick={() => setActiveImageIndex(index)}
+                              className="focus-visible:outline-none"
+                            >
+                              <Badge
+                                variant="secondary"
+                                className={`${item.badgeClass} ${activeImageIndex === index ? "ring-2 ring-primary/60" : ""}`}
+                              >
+                                {item.label}
+                              </Badge>
+                            </button>
+                          ))}
+                        </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-3">
-                          <div className="relative aspect-square bg-muted rounded-xl overflow-hidden">
-                            <div className="absolute inset-0 flex items-center justify-center p-4">
-                              {analysisImages[activeImageIndex]?.preview ? (
-                                <img
-                                  src={
-                                    analysisImages[activeImageIndex].preview ||
-                                    "/placeholder.svg"
-                                  }
-                                  alt={`${analysisImages[activeImageIndex].label} 분석 결과`}
-                                  className="h-full w-full rounded-lg border object-cover"
-                                />
-                              ) : (
-                                <div className="text-sm text-muted-foreground">
-                                  이미지가 없습니다.
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {analysisImages.map((item, index) => (
-                              <button
-                                key={item.label}
-                                type="button"
-                                onClick={() => setActiveImageIndex(index)}
-                                className="focus-visible:outline-none"
-                              >
-                                <Badge
-                                  variant="secondary"
-                                  className={`${item.badgeClass} ${activeImageIndex === index ? "ring-2 ring-primary/60" : ""}`}
-                                >
-                                  {item.label}
-                                </Badge>
-                              </button>
-                            ))}
+                        <div className="relative aspect-square bg-muted rounded-xl overflow-hidden">
+                          <div className="absolute inset-0 flex items-center justify-center p-4">
+                            {analysisImages[activeImageIndex]?.preview ? (
+                              <img
+                                src={
+                                  analysisImages[activeImageIndex].preview ||
+                                  "/placeholder.svg"
+                                }
+                                alt={`${analysisImages[activeImageIndex].label} 분석 결과`}
+                                className="h-full w-full rounded-lg border object-cover"
+                              />
+                            ) : (
+                              <div className="text-sm text-muted-foreground">
+                                이미지가 없습니다.
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -1735,6 +1765,26 @@ export default function ResultPage() {
                     <CardTitle className="flex items-center gap-2">
                       <Users className="h-5 w-5 text-primary" />
                       또래 비교
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            aria-label="도움말"
+                          >
+                            <HelpCircle className="h-3.5 w-3.5" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-4 text-left text-sm" align="start">
+                          <p className="font-semibold text-foreground mb-2">또래 비교</p>
+                          <p className="text-muted-foreground mb-2">
+                            파란 막대는 우리 아이의 T-Score(에너지·위치 안정성·표현력)입니다. 입력하신 <strong className="text-foreground">나이·성별</strong>과 같은 또래 기준으로 비교합니다.
+                          </p>
+                          <p className="text-muted-foreground">
+                            예: 8세 남아로 입력하면 8세 남아 또래 평균과 비교한 결과가 나옵니다.
+                          </p>
+                        </PopoverContent>
+                      </Popover>
                     </CardTitle>
                     <CardDescription>
                       {drawingScores?.age && drawingScores?.sex
@@ -1743,27 +1793,33 @@ export default function ResultPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={peerComparisonData} layout="vertical">
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            horizontal={true}
-                            vertical={false}
-                          />
-                          <XAxis type="number" domain={[0, 100]} />
-                          <YAxis dataKey="name" type="category" width={100} />
-                          <Tooltip />
-                          <Legend />
-                          <Bar
-                            dataKey="child"
-                            name={toCallName(analysisResult.childName)}
-                            fill="hsl(var(--primary))"
-                            radius={[0, 4, 4, 0]}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+                    {peerComparisonData.length > 0 ? (
+                      <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={peerComparisonData} layout="vertical">
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              horizontal={true}
+                              vertical={false}
+                            />
+                            <XAxis type="number" domain={[0, 100]} />
+                            <YAxis dataKey="name" type="category" width={100} />
+                            <Tooltip />
+                            <Legend />
+                            <Bar
+                              dataKey="child"
+                              name={toCallName(analysisResult.childName)}
+                              fill="#22c55e"
+                              radius={[0, 4, 4, 0]}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground py-8 text-center">
+                        이번 분석에 대한 또래 비교 데이터가 없습니다.
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -1774,6 +1830,35 @@ export default function ResultPage() {
                       <CardTitle className="flex items-center gap-2">
                         <BarChart3 className="h-5 w-5 text-primary" />
                         발달 단계 및 T-Score 해석
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                              aria-label="도움말"
+                            >
+                              <HelpCircle className="h-3.5 w-3.5" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 p-4 text-left text-sm" align="start">
+                            <p className="font-semibold text-foreground mb-2">T-Score 지표 설명</p>
+                            <ul className="space-y-2 text-muted-foreground mb-3">
+                              <li><strong className="text-foreground">에너지</strong>: 그림 크기 비율 기반 (클수록 에너지 높음)</li>
+                              <li><strong className="text-foreground">안정성</strong>: 위치(X·Y) 기반 (안정적일수록 높음)</li>
+                              <li><strong className="text-foreground">섬세함</strong>: 표현 요소 개수 기반 (많을수록 풍부)</li>
+                            </ul>
+                            <p className="font-semibold text-foreground mb-2">점수 구간과 색상</p>
+                            <ul className="space-y-1 text-muted-foreground">
+                              <li>· T &lt; 35 (낮음): 빨강 — 부족</li>
+                              <li>· 35 ~ 65 (적정): 노랑 — 보통</li>
+                              <li>· T &gt; 65 (높음): 초록 — 만족</li>
+                            </ul>
+                            <p className="font-semibold text-foreground mb-2 mt-3">발달 단계</p>
+                            <p className="text-muted-foreground text-xs">
+                              에너지·안정성·섬세함 3가지 T-Score 평균으로 구간을 정합니다. 평균 T ≥ 55면 정상 발달, 35~55면 보통 발달, 35 미만이면 지원이 필요한 영역이 있을 수 있습니다.
+                            </p>
+                          </PopoverContent>
+                        </Popover>
                       </CardTitle>
                       <CardDescription>
                         {drawingScores?.age && drawingScores?.sex
@@ -1801,7 +1886,7 @@ export default function ResultPage() {
                                 {item.value}점 (T-Score)
                               </span>
                             </div>
-                            <Progress value={item.value} className="h-2" />
+                            <Progress value={item.value} className="h-2 [&_[data-slot=progress-indicator]]:!bg-green-500" />
                           </div>
                         ))}
                       </div>
@@ -1815,17 +1900,19 @@ export default function ResultPage() {
                                 : getScoreKeyword(item.score, "표현력");
                           const status =
                             item.score < 35
-                              ? "text-amber-600 bg-amber-50 border-amber-200"
+                              ? "text-red-600 bg-red-50 border-red-200"
                               : item.score > 65
-                                ? "text-emerald-600 bg-emerald-50 border-emerald-200"
-                                : "text-slate-600 bg-slate-50 border-slate-200";
+                                ? "text-green-600 bg-green-50 border-green-200"
+                                : "text-amber-600 bg-amber-50 border-amber-200";
                           return (
                             <div
                               key={item.name}
                               className={`rounded-lg border p-3 text-center ${status}`}
                             >
-                              <p className="text-sm font-medium">{item.name}</p>
-                              <p className="text-xs font-semibold mt-1">
+                              <p className="text-base font-semibold text-foreground/90">
+                                {item.name}
+                              </p>
+                              <p className="text-sm font-medium mt-1.5 opacity-90">
                                 {keyword}
                               </p>
                             </div>
@@ -2312,6 +2399,7 @@ export default function ResultPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {psychologyData.length > 0 ? (
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {psychologyData.map((item) => {
                       const getStatusColor = (score: number) => {
@@ -2354,7 +2442,7 @@ export default function ResultPage() {
                           </div>
                           <div className="h-2 bg-white/80 rounded-full overflow-hidden mb-2">
                             <div
-                              className="h-full bg-primary rounded-full transition-all duration-500"
+                              className="h-full bg-green-500 rounded-full transition-all duration-500"
                               style={{ width: `${item.score}%` }}
                             />
                           </div>
@@ -2369,6 +2457,11 @@ export default function ResultPage() {
                       );
                     })}
                   </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-8 text-center">
+                      이번 분석에 대한 심리 점수 데이터가 없습니다.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -2383,30 +2476,23 @@ export default function ResultPage() {
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-3">
-                      <li className="flex items-start gap-3">
-                        <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-0.5">
-                          <Check className="h-3 w-3 text-green-600" />
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          풍부한 상상력과 창의성, 다양한 환경 요소에 대한 관심
-                        </span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-0.5">
-                          <Check className="h-3 w-3 text-green-600" />
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          감성적인 영역의 발달
-                        </span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-0.5">
-                          <Check className="h-3 w-3 text-green-600" />
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          놀이와 즐거움에 대한 욕구 (그네 표현)
-                        </span>
-                      </li>
+                      {(wholeResult?.긍정적인_측면?.length
+                        ? wholeResult.긍정적인_측면
+                        : [
+                            "풍부한 상상력과 창의성, 다양한 환경 요소에 대한 관심",
+                            "감성적인 영역의 발달",
+                            "놀이와 즐거움에 대한 욕구 (그네 표현)",
+                          ]
+                      ).map((text, i) => (
+                        <li key={i} className="flex items-start gap-3">
+                          <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-0.5">
+                            <Check className="h-3 w-3 text-green-600" />
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {text}
+                          </span>
+                        </li>
+                      ))}
                     </ul>
                   </CardContent>
                 </Card>
@@ -2420,23 +2506,22 @@ export default function ResultPage() {
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-3">
-                      <li className="flex items-start gap-3">
-                        <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
-                          <AlertTriangle className="h-3 w-3 text-amber-600" />
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          부정적 평가에 대한 두려움으로 인해 자신감 부족이나
-                          위축된 모습을 보일 수 있습니다
-                        </span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
-                          <AlertTriangle className="h-3 w-3 text-amber-600" />
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          내면의 안정감이나 자기 수용에 대한 노력이 필요합니다
-                        </span>
-                      </li>
+                      {(wholeResult?.주의_사항?.length
+                        ? wholeResult.주의_사항
+                        : [
+                            "부정적 평가에 대한 두려움으로 인해 자신감 부족이나 위축된 모습을 보일 수 있습니다",
+                            "내면의 안정감이나 자기 수용에 대한 노력이 필요합니다",
+                          ]
+                      ).map((text, i) => (
+                        <li key={i} className="flex items-start gap-3">
+                          <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                            <AlertTriangle className="h-3 w-3 text-amber-600" />
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {text}
+                          </span>
+                        </li>
+                      ))}
                     </ul>
                   </CardContent>
                 </Card>
@@ -2449,7 +2534,7 @@ export default function ResultPage() {
               forceMount
               className="space-y-6 data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none"
             >
-              {isPdfCaptureView && (
+              {isPdfCaptureView ? (
                 <div className="pb-3 mb-4 border-b border-border">
                   <h2 className="text-xl font-semibold text-foreground">
                     추천 사항
@@ -2458,36 +2543,71 @@ export default function ResultPage() {
                     카테고리별 맞춤 추천
                   </p>
                 </div>
+              ) : (
+                <div className="flex items-center gap-2 pb-2">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    카테고리별 맞춤 추천
+                  </h2>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        aria-label="도움말"
+                      >
+                        <HelpCircle className="h-3.5 w-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-4 text-left text-sm" align="start">
+                      <p className="font-semibold text-foreground mb-2">맞춤 추천</p>
+                      <p className="text-muted-foreground mb-2">
+                        이 아이의 <strong className="text-foreground">그림 분석·심리 해석 결과</strong>를 바탕으로 생성된 추천입니다.
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        정서·심리 지원, 대인관계·사회성 등 카테고리는 검사/논문 구조에 따라 구분됩니다.
+                      </p>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               )}
               <div className="grid gap-6 md:grid-cols-3">
-                {(apiRecommendations.length
-                  ? apiRecommendations
-                  : recommendations
-                ).map((rec) => (
-                  <Card key={rec.category}>
-                    <CardHeader>
-                      <CardTitle className="text-lg">
-                        {getRecommendationCategoryLabel(rec.category)}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-3">
-                        {rec.items.map((item, index) => (
-                          <li key={index} className="flex gap-3">
-                            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                              <span className="text-xs font-semibold text-primary">
-                                {index + 1}
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {item}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                ))}
+                {apiRecommendations.length > 0 ? (
+                  apiRecommendations.map((rec) => (
+                    <Card key={rec.category}>
+                      <CardHeader>
+                        <CardTitle className="text-lg">
+                          {getRecommendationCategoryLabel(rec.category)}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-3">
+                          {rec.items.map((item, index) => (
+                            <li key={index} className="flex gap-3">
+                              <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                                <span className="text-xs font-semibold text-primary">
+                                  {index + 1}
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground leading-relaxed">
+                                {item}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="col-span-full">
+                    <Card className="border-dashed">
+                      <CardContent className="py-12 text-center">
+                        <p className="text-sm text-muted-foreground">
+                          이번 분석에 대한 맞춤 추천이 없습니다.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
               </div>
 
               {/* CTA - PDF 저장 시 숨김 */}
