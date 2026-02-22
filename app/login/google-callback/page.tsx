@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+export const dynamic = "force-dynamic";
+
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function GoogleCallbackPage() {
+function GoogleCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -34,5 +36,13 @@ export default function GoogleCallbackPage() {
         <p className="text-sm text-muted-foreground">구글 로그인 처리 중입니다...</p>
       </div>
     </div>
+  );
+}
+
+export default function GoogleCallbackPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50" />}>
+      <GoogleCallbackContent />
+    </Suspense>
   );
 }

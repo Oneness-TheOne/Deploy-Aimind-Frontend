@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -402,7 +404,7 @@ function getRecommendationCategoryLabel(category: string): string {
   return category;
 }
 
-export default function ResultPage() {
+function ResultPageContent() {
   const [activeTab, setActiveTab] = useState("basic");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeInterpretTab, setActiveInterpretTab] = useState("tree");
@@ -2637,5 +2639,13 @@ export default function ResultPage() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+export default function ResultPage() {
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <ResultPageContent />
+    </React.Suspense>
   );
 }
