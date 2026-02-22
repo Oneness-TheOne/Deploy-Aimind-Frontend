@@ -45,6 +45,7 @@ export default function SettingsPage() {
     marketing: false,
     community: true
   })
+  const [profile, setProfile] = useState<{ name: string; email: string }>({ name: "", email: "" })
   const [profileImageUrl, setProfileImageUrl] = useState("")
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
@@ -52,12 +53,14 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveErrorMessage, setSaveErrorMessage] = useState("")
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [profileLoading, setProfileLoading] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const token =
       localStorage.getItem("auth_token") || sessionStorage.getItem("auth_token")
     if (!token) {
+      setProfileLoading(false)
       return
     }
     const fetchProfile = async () => {
@@ -70,6 +73,10 @@ export default function SettingsPage() {
           return
         }
         const data = await response.json()
+        setProfile({
+          name: data.name ?? "",
+          email: data.email ?? "",
+        })
         const imageUrl = data.profile_image_url ?? "base"
         if (imageUrl === "base") {
           setProfileImageUrl("")
@@ -80,6 +87,8 @@ export default function SettingsPage() {
         }
       } catch {
         // ignore profile fetch errors for now
+      } finally {
+        setProfileLoading(false)
       }
     }
     fetchProfile()
@@ -190,7 +199,7 @@ export default function SettingsPage() {
                       <Avatar className="h-20 w-20 border-2 border-slate-200">
                         <AvatarImage src={profileImagePreview || undefined} alt="프로필" />
                         <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                          김
+                          {profile.name?.trim() ? profile.name.trim().slice(0, 1) : "?"}
                         </AvatarFallback>
                       </Avatar>
                       {isUploading && (
@@ -239,15 +248,24 @@ export default function SettingsPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="name">이름</Label>
-                  <Input id="name" defaultValue="김미래" />
+                  <Input
+                    id="name"
+                    value={profile.name}
+                    readOnly
+                    className="bg-muted/50"
+                    placeholder={profileLoading ? "불러오는 중..." : ""}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">이메일</Label>
-                  <Input id="email" type="email" defaultValue="miracle.mom@email.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">연락처</Label>
-                  <Input id="phone" type="tel" defaultValue="010-1234-5678" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={profile.email}
+                    readOnly
+                    className="bg-muted/50"
+                    placeholder={profileLoading ? "불러오는 중..." : ""}
+                  />
                 </div>
                 <Button className="mt-2" onClick={handleSaveProfile} disabled={isSaving}>
                   {isSaving ? (
@@ -362,14 +380,8 @@ export default function SettingsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="bg-primary/5 rounded-lg p-4 mb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-foreground">프리미엄 플랜</p>
-                      <p className="text-sm text-muted-foreground">월 19,900원 · 다음 결제일: 2024.02.15</p>
-                    </div>
-                    <Button variant="outline" className="bg-transparent">관리</Button>
-                  </div>
+                <div className="bg-muted/30 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-muted-foreground">현재 구독 중인 플랜이 없습니다.</p>
                 </div>
                 <button className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
                   <span>결제 수단 관리</span>

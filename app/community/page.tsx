@@ -52,11 +52,7 @@ const defaultCategories = [
   { id: "expert", label: "전문가 칼럼" },
 ]
 
-const mockExperts = [
-  { id: "1", name: "김미영", title: "아동심리상담사", answerCount: 234, color: "bg-teal-500" },
-  { id: "2", name: "이수진", title: "미술치료사", answerCount: 189, color: "bg-cyan-500" },
-  { id: "3", name: "박정훈", title: "놀이치료사", answerCount: 156, color: "bg-emerald-500" }
-]
+const EXPERT_AVATAR_COLORS = ["bg-teal-500", "bg-cyan-500", "bg-emerald-500", "bg-sky-500", "bg-violet-500"]
 
 const popularTags = ["그림분석", "발달검사", "미술치료", "놀이치료", "정서발달", "5세", "7세", "불안"]
 
@@ -106,6 +102,7 @@ export default function CommunityPage() {
     comments: 0,
     experts: 0,
   })
+  const [experts, setExperts] = useState<{ user_id: number; name: string; title: string; answer_count: number }[]>([])
 
   const heroAnim = useScrollAnimation()
   const searchAnim = useScrollAnimation()
@@ -258,6 +255,17 @@ export default function CommunityPage() {
       .catch(error => {
         if (error instanceof DOMException && error.name === "AbortError") return
       })
+    return () => controller.abort()
+  }, [apiBaseUrl])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch(`${apiBaseUrl}/community/experts`, { signal: controller.signal })
+      .then(response => (response.ok ? response.json() : []))
+      .then((data: { user_id: number; name: string; title: string; answer_count: number }[]) => {
+        setExperts(Array.isArray(data) ? data : [])
+      })
+      .catch(() => setExperts([]))
     return () => controller.abort()
   }, [apiBaseUrl])
 
@@ -601,14 +609,14 @@ export default function CommunityPage() {
                   활동 중인 전문가
                 </h3>
                 <div className="space-y-3">
-                  {mockExperts.map(expert => (
+                  {experts.slice(0, 5).map((expert, idx) => (
                     <div 
-                      key={expert.id} 
+                      key={expert.user_id} 
                       className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
                     >
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback className={`${expert.color} text-white text-sm`}>
-                          {expert.name[0]}
+                        <AvatarFallback className={`${EXPERT_AVATAR_COLORS[idx % EXPERT_AVATAR_COLORS.length]} text-white text-sm`}>
+                          {expert.name?.[0] ?? "?"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
@@ -616,7 +624,7 @@ export default function CommunityPage() {
                         <p className="text-xs text-slate-500">{expert.title}</p>
                       </div>
                       <span className="text-xs text-slate-400">
-                        답변 {expert.answerCount}
+                        답변 {expert.answer_count}
                       </span>
                     </div>
                   ))}

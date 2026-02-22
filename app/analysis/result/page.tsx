@@ -274,7 +274,7 @@ function getComponentElementsFromImageJson(
         const ratio = val?.ratio ?? 0;
         const cx = val?.center_x ?? -1;
         const pos =
-          cx >= 0 ? (cx < 0.4 ? "왼쪽" : cx > 0.6 ? "오른쪽" : "가운데") : "";
+          cx >= 0 ? (cx < 0.35 ? "왼쪽" : cx > 0.65 ? "오른쪽" : "가운데") : "";
         const note =
           has && ratio > 0
             ? `면적 약 ${(ratio * 100).toFixed(1)}%${pos ? `, ${pos} 위치` : ""}`
