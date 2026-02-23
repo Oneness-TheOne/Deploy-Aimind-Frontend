@@ -64,9 +64,6 @@ export function Header() {
           <span className={`text-xl font-bold ${showTransparent ? "text-primary" : "text-primary"}`}>
             아이마음
           </span>
-          <span className={`text-xl font-bold ${showTransparent ? "text-white" : "text-foreground"}`}>
-            센터
-          </span>
         </Link>
 
         {/* Desktop Navigation - Centered */}
@@ -129,7 +126,6 @@ export function Header() {
               <Link href="/" onClick={() => setIsOpen(false)} className="flex items-center gap-2 px-4 mb-2">
                 <img src="/aimind.png" alt="아이마음" className="h-6 w-6 object-contain" />
                 <span className="text-lg font-bold text-primary">아이마음</span>
-                <span className="text-lg font-bold text-foreground">센터</span>
               </Link>
               <nav className="flex flex-col">
                 {navigation.map((item) => {
