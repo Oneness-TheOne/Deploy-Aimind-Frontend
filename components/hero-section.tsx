@@ -47,7 +47,7 @@ export function HeroSection() {
                   size="lg" 
                   className="bg-white text-primary hover:bg-white/90 rounded-full px-8 h-12 text-base font-medium shadow-lg"
                 >
-                  빠른 상담 신청하기
+                  그림 분석 시작하기
                 </Button>
               </Link>
             </div>
